@@ -55,6 +55,20 @@ void eval(char *cmdline) {
   strcpy(buf, cmdline);
   bg = parseline(buf, argv);
 
+  if (argv[0] == NULL)
+    return;
+
+  if ((pid = fork()) == 0) {
+    if (execvp(argv[0], argv) < 0) {
+      printf("%s: Command not found.", argv[0]);
+      exit(1);
+    }
+  } else {
+    if (!bg) {
+      waitpid(pid, NULL, 0);
+    }
+  }
+
   // int i = 0;
   // while (argv[i]) {
   //   printf("%s\n", argv[i]);
