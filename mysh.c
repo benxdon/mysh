@@ -13,6 +13,21 @@ void str_replace(char *str, int from, int to) {
     *pos = to;
 }
 
+// return 1 if built in, 0 if not
+int built_in_cmd(char *argv[]) {
+  if (!strcmp(argv[0], "exit"))
+    exit(0);
+  if (!strcmp(argv[0], "cd")) {
+    if (argv[1] && chdir(argv[1])) {
+      printf("%s: Invalid path.\n", argv[1]);
+    } else if (!(argv[1])) {
+      printf("Insufficient arguments.\n");
+    }
+    return 1;
+  }
+  return 0;
+}
+
 // function to create argc
 int parseline(char *buf, char *argv[]) {
   char *delim;
@@ -48,24 +63,22 @@ void eval(char *cmdline) {
   int bg;
   pid_t pid;
 
-  if (!strcmp(cmdline, "exit ")) {
-    exit(0);
-  }
-
   strcpy(buf, cmdline);
   bg = parseline(buf, argv);
 
   if (argv[0] == NULL)
     return;
 
-  if ((pid = fork()) == 0) {
-    if (execvp(argv[0], argv) < 0) {
-      printf("%s: Command not found.", argv[0]);
-      exit(1);
-    }
-  } else {
-    if (!bg) {
-      waitpid(pid, NULL, 0);
+  if (!built_in_cmd(argv)) {
+    if ((pid = fork()) == 0) {
+      if (execvp(argv[0], argv) < 0) {
+        printf("%s: Command not found.\n", argv[0]);
+        exit(1);
+      }
+    } else {
+      if (!bg) {
+        waitpid(pid, NULL, 0);
+      }
     }
   }
 
@@ -83,7 +96,8 @@ int main() {
 
   while (1) {
     printf("> ");
-    fgets(cmdline, MAXLINE, stdin);
+    if(fgets(cmdline, MAXLINE, stdin)==NULL)
+      exit(0);
     str_replace(cmdline, '\n', ' ');
     eval(cmdline);
   }
