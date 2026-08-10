@@ -3,6 +3,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <signal.h>
+#include <errno.h>
 
 #define MAXLINE 128
 #define MAXARGS 128
@@ -11,6 +13,11 @@ void str_replace(char *str, int from, int to) {
   char *pos;
   if ((pos = strchr(str, from)))
     *pos = to;
+}
+
+void handler(int sig) {
+  write(STDOUT_FILENO, "\n> ", 3);
+  return;
 }
 
 // return 1 if built in, 0 if not
@@ -95,6 +102,10 @@ int main() {
   char cmdline[MAXLINE];
 
   while (1) {
+    if (signal(SIGINT, handler) == SIG_ERR) {
+      perror("signal error");
+      exit(1);
+    }
     printf("> ");
     if(fgets(cmdline, MAXLINE, stdin)==NULL)
       exit(0);
