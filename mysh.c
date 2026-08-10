@@ -9,18 +9,14 @@
 #define MAXLINE 128
 #define MAXARGS 128
 
+// eval function helpers
 void str_replace(char *str, int from, int to) {
   char *pos;
   if ((pos = strchr(str, from)))
     *pos = to;
 }
 
-void handler(int sig) {
-  write(STDOUT_FILENO, "\n> ", 3);
-  return;
-}
-
-// return 1 if built in, 0 if not
+// return 1 if built in, 0 if not (eval function helper)
 int built_in_cmd(char *argv[]) {
   if (!strcmp(argv[0], "exit"))
     exit(0);
@@ -35,7 +31,7 @@ int built_in_cmd(char *argv[]) {
   return 0;
 }
 
-// function to create argc
+// function to create argc (eval function helper)
 int parseline(char *buf, char *argv[]) {
   char *delim;
   int bg;
@@ -97,15 +93,36 @@ void eval(char *cmdline) {
   //
 }
 
+// signals handler
+void sigint_handler(int sig) {
+  write(STDOUT_FILENO, "\n> ", 3);
+  return;
+}
+
+void sigchld_handler(int sig) {
+  pid_t pid;
+
+  while ((pid = waitpid(-1, NULL, 0)) > 0)
+    printf("");
+  if (errno != ECHILD)
+    perror("waitpid error");
+
+}
 
 int main() {
   char cmdline[MAXLINE];
 
+  if (signal(SIGINT, sigint_handler) == SIG_ERR) {
+    perror("sigint error");
+    exit(1);
+  }
+
+  if (signal(SIGCHLD, sigchld_handler) == SIG_ERR) {
+    perror("sigchld error");
+    exit(1);
+  }
+
   while (1) {
-    if (signal(SIGINT, handler) == SIG_ERR) {
-      perror("signal error");
-      exit(1);
-    }
     printf("> ");
     if(fgets(cmdline, MAXLINE, stdin)==NULL)
       exit(0);
