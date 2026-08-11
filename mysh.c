@@ -5,6 +5,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #define MAXLINE 128
 #define MAXARGS 128
@@ -73,7 +74,44 @@ void eval(char *cmdline) {
     return;
 
   if (!built_in_cmd(argv)) {
+    int i=0, out=0, in=0;
+    char *input=NULL, *output=NULL;
+
+    while (argv[i]) {
+      out = strcmp(argv[i], ">");
+      in = strcmp(argv[i], "<");
+
+      if (!out) {
+        output = argv[i+1];
+      }
+      if (!in) {
+        input = argv[i+1];
+      }
+      if (!in || !out)
+        argv[i] = NULL;
+      i++;
+    }
+
     if ((pid = fork()) == 0) {
+      if (input) {
+        int fd = open(input, O_RDONLY);
+        if (fd < 0) {
+          perror("file open error");
+          exit(1);
+        }
+        dup2(fd, STDIN_FILENO);
+        close(fd);
+      }
+      if (output) {
+        int fd = open(output, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (fd < 0) {
+          perror("file open error");
+          exit(1);
+        }
+        dup2(fd, STDOUT_FILENO);
+        close(fd);
+
+      }
       if (execvp(argv[0], argv) < 0) {
         printf("%s: Command not found.\n", argv[0]);
         exit(1);
@@ -84,13 +122,6 @@ void eval(char *cmdline) {
       }
     }
   }
-
-  // int i = 0;
-  // while (argv[i]) {
-  //   printf("%s\n", argv[i]);
-  //   i++;
-  // }
-  //
 }
 
 // signals handler
