@@ -101,12 +101,11 @@ void sigint_handler(int sig) {
 
 void sigchld_handler(int sig) {
   pid_t pid;
+  int olderrno = errno;
 
-  while ((pid = waitpid(-1, NULL, 0)) > 0)
-    printf("");
-  if (errno != ECHILD)
-    perror("waitpid error");
-
+  while ((pid = waitpid(-1, NULL, WNOHANG)) > 0)
+    ;
+  errno = olderrno;
 }
 
 int main() {
